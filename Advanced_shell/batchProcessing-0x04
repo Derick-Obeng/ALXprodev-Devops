@@ -1,6 +1,6 @@
 #!/bin/bash
-# batchProcessing-0x04
-# Fetch multiple Pokémon data in parallel and save to separate files.
+
+# Fetch multiple Pokémon data in parallel with proper process handling.
 
 POKEMONS=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
 OUTPUT_DIR="pokemon_data"
@@ -14,7 +14,7 @@ fetch_pokemon() {
     local file="${OUTPUT_DIR}/${name}.json"
 
     echo "Fetching data for $name..."
-    if curl -s "https://pokeapi.co/api/v2/pokemon/${name}" -o "$file"; then
+    if curl -s --max-time 10 "https://pokeapi.co/api/v2/pokemon/${name}" -o "$file"; then
         echo "Saved data to $file ✅"
     else
         echo "Failed to fetch data for $name ❌" | tee -a "$ERROR_FILE"
@@ -22,13 +22,21 @@ fetch_pokemon() {
     fi
 }
 
-# Loop through Pokémon and fetch in background
+# Store PIDs of background processes
+pids=()
+
 for pokemon in "${POKEMONS[@]}"; do
     fetch_pokemon "$pokemon" &
+    pids+=($!)  # Save PID
 done
 
-# Wait for all background jobs to complete
-wait
+# Wait for all jobs, kill if they hang
+for pid in "${pids[@]}"; do
+    if ! wait "$pid"; then
+        echo "Process $pid failed or hung — killing it." | tee -a "$ERROR_FILE"
+        kill -9 "$pid" 2>/dev/null
+    fi
+done
 
 echo "All Pokémon data fetched."
 if [[ -s "$ERROR_FILE" ]]; then

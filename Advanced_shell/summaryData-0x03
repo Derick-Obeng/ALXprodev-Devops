@@ -1,39 +1,22 @@
 #!/bin/bash
 
-DATA_DIR="pokemon_data"
-REPORT_FILE="pokemon_report.csv"
+# Generate CSV report of Pokémon data with averages.
 
-# Check if data directory exists
-if [ ! -d "$DATA_DIR" ]; then
-    echo "Error: $DATA_DIR directory not found."
-    exit 1
-fi
+OUTPUT_FILE="pokemon_report.csv"
 
-# Start CSV with header
-echo "Name,Height (m),Weight (kg)" > "$REPORT_FILE"
+echo "Name,Height (m),Weight (kg)" > "$OUTPUT_FILE"
 
-# Extract data from JSON files
-for file in "$DATA_DIR"/*.json; do
-    name=$(jq -r '.name' "$file" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')
-    height=$(jq -r '.height' "$file")
-    weight=$(jq -r '.weight' "$file")
-    
-    # Convert decimeters to meters, hectograms to kilograms
-    height_m=$(awk -v h="$height" 'BEGIN { printf "%.1f", h/10 }')
-    weight_kg=$(awk -v w="$weight" 'BEGIN { printf "%.1f", w/10 }')
-    
-    echo "$name,$height_m,$weight_kg" >> "$REPORT_FILE"
+# Process each JSON file
+for file in pokemon_data/*.json; do
+    name=$(jq -r '.name' "$file" | sed 's/.*/\u&/') # sed used to capitalize
+    height=$(jq '.height' "$file" | awk '{print $1/10}') # convert to meters
+    weight=$(jq '.weight' "$file" | awk '{print $1/10}') # convert to kg
+
+    echo "$name,$height,$weight" >> "$OUTPUT_FILE"
 done
 
-# Print CSV file path
-echo "CSV Report generated at: $REPORT_FILE"
-echo ""
-cat "$REPORT_FILE"
-echo ""
+echo -e "\nCSV Report generated at: $OUTPUT_FILE\n"
 
 # Calculate averages with awk
-awk -F',' 'NR>1 { total_h+=$2; total_w+=$3; count++ }
-END {
-    printf "Average Height: %.2f m\n", total_h/count
-    printf "Average Weight: %.2f kg\n", total_w/count
-}' "$REPORT_FILE"
+awk -F',' 'NR>1 {h+=$2; w+=$3; c++} 
+END {print "Average Height: " h/c " m"; print "Average Weight: " w/c " kg"}' "$OUTPUT_FILE"

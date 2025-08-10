@@ -1,8 +1,14 @@
 #!/bin/bash
 
-name=$(jq -r '.name' data.json | sed 's/.*/\u&/')
-height=$(jq -r '.height' data.json | awk '{printf "%.1f", $1 / 10}')
-weight=$(jq -r '.weight' data.json | awk '{print $1 / 10}')
-type=$(jq -r '.types[0].type.name' data.json | sed 's/.*/\u&/')
+# Extract values from JSON using jq
+name=$(jq -r '.name' pokemon.json | sed 's/.*/\u&/')
+type=$(jq -r '.types[0].type.name' pokemon.json | sed 's/.*/\u&/')
+height=$(jq '.height' pokemon.json)
+weight=$(jq '.weight' pokemon.json)
 
-echo "$name is of type $type, weighs ${weight}kg, and is ${height}m tall."
+# Convert to meters and kg
+formatted_height=$(awk "BEGIN {printf \"%.1f\", $height/10}")
+formatted_weight=$(awk "BEGIN {printf \"%.1f\", $weight/10}")
+
+# Required exact output
+echo "$name is of type $type, weighs ${formatted_weight}kg, and is ${formatted_height}m tall."
